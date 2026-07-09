@@ -17,7 +17,8 @@ def listar_passageiros(apenas_ativos=True):
     try:
         sql = """
             SELECT id_passageiro, nome, telefone, rua, numero, bairro,
-                   complemento, observacoes, ativo
+                   complemento, observacoes, responsavel, idade,
+                   tempo_no_programa, ativo
             FROM passageiros
         """
         if apenas_ativos:
@@ -40,7 +41,8 @@ def buscar_passageiro(id_passageiro):
         cur.execute(
             """
             SELECT id_passageiro, nome, telefone, rua, numero, bairro,
-                   complemento, observacoes, ativo
+                   complemento, observacoes, responsavel, idade,
+                   tempo_no_programa, ativo
             FROM passageiros
             WHERE id_passageiro = %s
             """,
@@ -53,7 +55,10 @@ def buscar_passageiro(id_passageiro):
         conn.close()
 
 
-def cadastrar_passageiro(nome, telefone, rua, numero, bairro, complemento, observacoes):
+def cadastrar_passageiro(
+    nome, telefone, rua, numero, bairro, complemento, observacoes,
+    responsavel, idade, tempo_no_programa,
+):
     conn = conectar()
     cur = conn.cursor()
 
@@ -61,10 +66,14 @@ def cadastrar_passageiro(nome, telefone, rua, numero, bairro, complemento, obser
         cur.execute(
             """
             INSERT INTO passageiros
-                (nome, telefone, rua, numero, bairro, complemento, observacoes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (nome, telefone, rua, numero, bairro, complemento, observacoes,
+                 responsavel, idade, tempo_no_programa)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (nome, telefone, rua, numero, bairro, complemento, observacoes),
+            (
+                nome, telefone, rua, numero, bairro, complemento, observacoes,
+                responsavel, idade, tempo_no_programa,
+            ),
         )
         conn.commit()
         return True, "Passageiro cadastrado com sucesso!"
@@ -78,7 +87,10 @@ def cadastrar_passageiro(nome, telefone, rua, numero, bairro, complemento, obser
         conn.close()
 
 
-def atualizar_passageiro(id_passageiro, nome, telefone, rua, numero, bairro, complemento, observacoes):
+def atualizar_passageiro(
+    id_passageiro, nome, telefone, rua, numero, bairro, complemento, observacoes,
+    responsavel, idade, tempo_no_programa,
+):
     conn = conectar()
     cur = conn.cursor()
 
@@ -87,10 +99,14 @@ def atualizar_passageiro(id_passageiro, nome, telefone, rua, numero, bairro, com
             """
             UPDATE passageiros
             SET nome = %s, telefone = %s, rua = %s, numero = %s,
-                bairro = %s, complemento = %s, observacoes = %s
+                bairro = %s, complemento = %s, observacoes = %s,
+                responsavel = %s, idade = %s, tempo_no_programa = %s
             WHERE id_passageiro = %s
             """,
-            (nome, telefone, rua, numero, bairro, complemento, observacoes, id_passageiro),
+            (
+                nome, telefone, rua, numero, bairro, complemento, observacoes,
+                responsavel, idade, tempo_no_programa, id_passageiro,
+            ),
         )
         conn.commit()
         return True, "Passageiro atualizado com sucesso!"
@@ -172,10 +188,28 @@ with tab_cadastro:
                     "Nome *",
                     value=dados_edicao[1] if dados_edicao else "",
                 )
+                responsavel = st.text_input(
+                    "Responsável",
+                    value=dados_edicao[8] or "" if dados_edicao else "",
+                )
+                idade = st.number_input(
+                    "Idade",
+                    min_value=0,
+                    max_value=150,
+                    step=1,
+                    value=int(dados_edicao[9]) if dados_edicao and dados_edicao[9] is not None else 0,
+                )
+                tempo_no_programa = st.text_input(
+                    "Tempo no programa",
+                    value=dados_edicao[10] or "" if dados_edicao else "",
+                    placeholder="Ex: 2 anos, 6 meses",
+                )
                 telefone = st.text_input(
                     "Telefone",
                     value=dados_edicao[2] or "" if dados_edicao else "",
                 )
+
+            with col2:
                 rua = st.text_input(
                     "Rua",
                     value=dados_edicao[3] or "" if dados_edicao else "",
@@ -184,8 +218,6 @@ with tab_cadastro:
                     "Número",
                     value=dados_edicao[4] or "" if dados_edicao else "",
                 )
-
-            with col2:
                 bairro = st.text_input(
                     "Bairro *",
                     value=dados_edicao[5] or "" if dados_edicao else "",
@@ -212,6 +244,8 @@ with tab_cadastro:
                 st.rerun()
 
             if salvar:
+                idade_val = int(idade) if idade > 0 else None
+
                 if not nome.strip():
                     st.warning("Informe o nome.")
                 elif not bairro.strip():
@@ -226,6 +260,9 @@ with tab_cadastro:
                         bairro.strip(),
                         complemento.strip() or None,
                         observacoes.strip() or None,
+                        responsavel.strip() or None,
+                        idade_val,
+                        tempo_no_programa.strip() or None,
                     )
                     if ok:
                         st.success(msg)
@@ -242,6 +279,9 @@ with tab_cadastro:
                         bairro.strip(),
                         complemento.strip() or None,
                         observacoes.strip() or None,
+                        responsavel.strip() or None,
+                        idade_val,
+                        tempo_no_programa.strip() or None,
                     )
                     if ok:
                         st.success(msg)
@@ -278,6 +318,9 @@ with tab_listagem:
                 bairro,
                 complemento,
                 observacoes,
+                responsavel,
+                idade,
+                tempo_no_programa,
                 ativo,
             ) = registro
 
@@ -286,6 +329,9 @@ with tab_listagem:
                 c1, c2 = st.columns(2)
 
                 with c1:
+                    st.write(f"**Responsável:** {responsavel or '-'}")
+                    st.write(f"**Idade:** {idade if idade is not None else '-'}")
+                    st.write(f"**Tempo no programa:** {tempo_no_programa or '-'}")
                     st.write(f"**Telefone:** {telefone or '-'}")
                     st.write(f"**Rua:** {rua or '-'}")
                     st.write(f"**Número:** {numero or '-'}")
